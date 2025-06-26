@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>茶屋商店 お見積りフォーム</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; background: #f0f0f0; padding-bottom: 80px; }
+    .product-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
+    .card {
+      background: white;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .card:hover { transform: scale(1.02); }
+    .card h2 { margin: 0.5rem 0; font-size: 1.1rem; }
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #fff;
+      border-top: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+      font-size: 1.1rem;
+      box-sizing: border-box;
+    }
+    .cart-icon {
+      position: relative;
+      display: inline-block;
+    }
+    .cart-icon span {
+      position: absolute;
+      top: -8px;
+      right: -10px;
+      background: red;
+      color: white;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>茶屋商店｜サービス一覧</h1>
+  <div class="product-list" id="productList"></div>
+
+  <a href="cart.html">
+    <div class="footer">
+      <div><strong>カート合計：<span id="cartTotal">0 円</span></strong></div>
+      <div class="cart-icon">🛒<span id="cartCount">0</span></div>
+    </div>
+  </a>
+
+  <script>
+    const products = [
+      { name: "名刺（両面）", price: 33000 },
+      { name: "チラシ・ポスター（片面）", price: 55000 },
+      { name: "チラシ（両面）", price: 66000 },
+      { name: "パンフレット8P", price: 66000 },
+      { name: "パッケージ", price: 66000 },
+      { name: "SNS画像", price: 15500 },
+      { name: "グッズ", price: 22000 },
+      { name: "ロゴ", price: 0 },
+      { name: "ロゴ・メインビジュアル制作＋同一ベースのツール2種", price: 220000 },
+      { name: "カスタムプロジェクト（ロゴ＋ツール一式）＊要相談", price: 330000 },
+    ];
+
+    const list = document.getElementById("productList");
+    const cartTotal = document.getElementById("cartTotal");
+    const cartCount = document.getElementById("cartCount");
+
+    function renderProducts() {
+      products.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `<h2>${p.name}</h2><div>${p.price.toLocaleString()} 円</div>`;
+        card.addEventListener("click", () => {
+          window.location.href = `detail.html?name=${encodeURIComponent(p.name)}&price=${p.price}`;
+        });
+        list.appendChild(card);
+      });
+    }
+
+    function updateCartSummary() {
+      const cart = JSON.parse(localStorage.getItem("estimateCart") || "[]");
+      const count = cart.length;
+      const total = cart.reduce((sum, item) => sum + (item.total || 0), 0);
+      cartCount.textContent = count;
+      cartTotal.textContent = `${total.toLocaleString()} 円`;
+    }
+
+    renderProducts();
+    updateCartSummary();
+  </script>
+</body>
+</html>

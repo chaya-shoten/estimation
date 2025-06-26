@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>見積もり詳細</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; background: #f0f0f0; }
+    h1 { margin-bottom: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { font-weight: bold; display: block; margin-bottom: 0.5rem; }
+    select { width: 100%; padding: 0.5rem; }
+    .summary { margin-top: 2rem; font-size: 1.2rem; background: #fff; padding: 1rem; border-radius: 10px; }
+    .note { color: #888; font-size: 0.9rem; margin-top: 0.5rem; }
+    .cart-button {
+      margin-top: 1rem;
+      display: inline-block;
+      padding: 0.7rem 1.5rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .cart-button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <button onclick="history.back()" style="
+    margin: 1rem 0;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    background: #888;
+    color: white;
+    cursor: pointer;
+  ">← 戻る</button>
+  <h1 id="productName">商品名</h1>
+  <div id="formContainer"></div>
+  <div class="summary">
+    <strong>合計金額：<span id="total">-</span></strong><br>
+    <div id="extraNotes"></div>
+    <button class="cart-button" onclick="addToCart()">カートに追加</button>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const name = params.get("name");
+    const basePrice = parseInt(params.get("price"), 10);
+    document.getElementById("productName").textContent = name;
+
+    const questionsData = [
+      {
+        label: "初めての制作ですか",
+        choices: [
+          { label: "はい", price: 0 },
+          { label: "リピート", price: name.includes("SNS") || name.includes("名刺") ? -5500 : -11000 }
+        ]
+      },
+      {
+        label: "方向性",
+        choices: [
+          { label: "イラストや資料でイメージを共有できる", price: 0 },
+          { label: "お任せ", price: name.includes("名刺") ? 15000 : name.includes("チラシ・ポスター") ? 22000 : name.includes("パンフレット") ? 33000 : name.includes("パッケージ") ? 44000 : 22000 }
+        ]
+      },
+      {
+        label: "ロゴまたはキービジュアル制作費",
+        choices: [
+          { label: "不要（＋0円）", price: 0 },
+          { label: "既存のものを提供できる（＋0円）", price: 0 },
+          { label: "他商品で制作したものを使用（＋0円）", price: 0 },
+          { label: "新たに制作が必要：Aプラン（＋3.3万円）", price: 33000 },
+          { label: "新たに制作が必要：Bプラン（＋8.8万円）", price: 88000 },
+          { label: "新たに制作が必要：Cプラン （＋22万円）", price: 220000 }
+        ]
+      },
+      {
+        label: "原稿",
+        choices: [
+          { label: "自分で用意", price: 0 },
+          { label: "原稿調整（支給原稿の整理・短縮）", price: 5500 },
+          { label: "原稿AI支援コース", price: 11000 },
+          { label: "原稿作成（ヒアリングベース）", price: 22000 },
+          { label: "コピー提案＋全面原稿作成", price: 33000 },
+          { label: "原稿作成がメインの案件", price: "要見積もり" }
+        ]
+      },
+      {
+        label: "素材",
+        choices: [
+          { label: "ロゴトレース（元データなしの場合）", price: "要見積もり" },
+          { label: "写真撮影", price: "要見積もり" },
+          { label: "イラスト作成", price: "要見積もり" }
+        ]
+      },
+      {
+        label: "文字校正",
+        choices: [
+          { label: "自分で校正", price: 0 },
+          { label: "文字校正（AI＋制作者による確認）", price: "要見積もり" },
+          { label: "外部プロ校正", price: "要見積もり" },
+          { label: "ロゴトレース（元データなしの場合）", price: "要見積もり" }
+        ]
+      },
+      {
+        label: "納品方法",
+        choices: [
+          { label: "データ納品のみ", price: 0 },
+          { label: "紙で納品（印刷発注代行）", price: "実費" }
+        ]
+      },
+      {
+        label: "紙の種類／印刷方法",
+        choices: [
+          { label: "おまかせ用紙", price: 0 },
+          { label: "こだわりの仕様", price: 33000 }
+        ]
+      },
+      {
+        label: "印刷校正",
+        choices: [
+          { label: "不要", price: 0 },
+          { label: "校正紙印刷", price: "実費" }
+        ]
+      },
+      {
+        label: "サンプル製作",
+        choices: [
+          { label: "不要", price: 0 },
+          { label: "必要", price: "実費" }
+        ]
+      }
+    ];
+    const logoQuestionsData = [
+      {
+        label: "ロゴまたはキービジュアル制作費",
+        choices: [
+          { label: "新たに制作が必要：Aプラン（＋3.3万円）", price: 33000 },
+          { label: "新たに制作が必要：Bプラン（＋8.8万円）", price: 88000 },
+          { label: "新たに制作が必要：Cプラン （＋22万円）", price: 220000 }
+        ]
+      },
+    ];
+
+    const container = document.getElementById("formContainer");
+    const notes = document.getElementById("extraNotes");
+    const totalDisplay = document.getElementById("total");
+    let selectedOptions = [];
+    let total = basePrice;
+    let extra = [];
+
+    function renderForm() {
+      selectedOptions = [];
+      filteredQuestions = [];
+
+      if(name == 'ロゴ') {
+        filteredQuestions = logoQuestionsData;
+      } else if(name == 'ロゴ・メインビジュアル制作＋同一ベースのツール2種' || name == 'カスタムプロジェクト（ロゴ＋ツール一式）＊要相談') { 
+        // 質問なし
+      } else {
+        // 商品名に応じてフィルタリング
+        filteredQuestions = questionsData.filter(q => {
+          if (q.label === "印刷校正" && (name.includes("SNS画像") || name.includes("グッズ"))) {
+            return false; // 表示しない
+          }
+          if ((q.label === "納品方法" || q.label === "紙の種類／印刷方法") && (name.includes("SNS画像"))) {
+            return false; // 表示しない
+          }
+          if (q.label === "サンプル製作" && !name.includes("グッズ")) {
+            return false; // 表示しない
+          }
+          return true; // 表示する
+        });
+      }
+
+      filteredQuestions.forEach((opt, i) => {
+        const group = document.createElement("div");
+        group.className = "form-group";
+        const label = document.createElement("label");
+        label.textContent = opt.label;
+        group.appendChild(label);
+        const select = document.createElement("select");
+        select.label = opt.label;
+        opt.choices.forEach(choice => {
+          const option = document.createElement("option");
+          option.value = choice.price;
+          option.textContent = choice.label;
+          select.appendChild(option);
+        });
+        select.addEventListener("change", updateTotal);
+        group.appendChild(select);
+        container.appendChild(group);
+      });
+
+      if(name == 'ロゴ') {
+        const p = document.createElement("p");
+        p.innerHTML = `
+Aプラン<br />
+：１〜２案提出（配色またはレイアウト違い）<br />
+・ラフや方向性の資料をご自身で用意できる方限定<br />
+・方向性が決まってる場合のみ対応可<br />
+<br />
+Bプラン<br />
+：方向性3案（アイディア段階のみ）<br />
+・個人事業主または小さなプロジェクト向け<br />
+・自分に決裁権がある場合はこちら<br />
+・お任せや、ラフ通りではないアレンジをご希望の場合もこちら<br />
+<br />
+Cプラン<br /> 
+：3案制作<br />
+・企業・組織向け<br />
+・決裁者が複数いる場合はこちら<br />
+・3案を作り込み比較できるようにして提案します<br />
+        `;
+        container.appendChild(p);
+      }
+
+      updateTotal();
+    }
+
+    function updateTotal() {
+      total = basePrice;
+      extra = [];
+      selectedOptions = [];
+
+      document.querySelectorAll("select").forEach(sel => {
+        const val = sel.value;
+        const price = isNaN(parseInt(val)) ? val : parseInt(val);
+        const label = sel.options[sel.selectedIndex].textContent;
+        const questionLabel = sel.label;
+        
+        selectedOptions.push({ questionLabel, label, price });
+        if (typeof price === "number") {
+          total += price;
+        } else if (typeof price === "string" && (price.includes("実費") || price.includes("要見積もり"))) {
+          if(price.includes("実費")) extra.push(`＋${label} 実費`);
+          if(price.includes("要見積もり")) extra.push(`＋${label} 要見積もり`);
+        }
+      });
+
+      totalDisplay.textContent = total.toLocaleString("ja-JP") + " 円";
+      notes.innerHTML = extra.map(x => `<div>${x}</div>`).join("");
+    }
+
+    function addToCart() {
+      const cart = JSON.parse(localStorage.getItem("estimateCart") || "[]");
+      cart.push({
+        name,
+        total,
+        extra,
+        options: selectedOptions
+      });
+      localStorage.setItem("estimateCart", JSON.stringify(cart));
+      alert("カートに追加しました！");
+      window.history.back();
+    }
+
+    renderForm();
+  </script>
+</body>
+</html>

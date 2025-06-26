@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>カート商品一覧</title>
+  <style>
+    body { font-family: sans-serif; padding: 1.5rem; max-width: 700px; margin: auto; background: #f0f0f0; }
+    h1 { margin-bottom: 1.5rem; }
+    .item { background: white; margin-bottom: 1rem; padding: 1rem; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .item-header { display: flex; justify-content: space-between; align-items: center; }
+    .item-options { margin-top: 0.5rem; font-size: 0.95rem; color: #555; }
+    button.remove-btn {
+      background: #ff5c5c;
+      color: white;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 5px;
+      cursor: pointer;
+      min-width: 55px;
+    }
+    button.remove-btn:hover { background: #e60000; }
+    .summary {
+      margin-top: 2rem;
+      font-size: 1.2rem;
+      background: white;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button.submit-btn {
+      margin-top: 1rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button.submit-btn:hover { background: #0056b3; }
+    /* #cartWrapper {
+      overflow: visible;
+    } */
+  @media print {
+    /* 印刷時だけ反映されるスタイル */
+    body {
+      background: white;
+      margin: 0;
+    }
+
+    .no-print {
+      display: none;
+    }
+
+    .page {
+      page-break-after: always; /* 改ページ */
+    }
+    #cartWrapper {
+      background: white;
+      padding: 40px;
+      width: 794px; /* 約210mm @96dpi */
+      min-height: 1123px; /* 約297mm @96dpi */
+      box-sizing: border-box;
+      margin: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+  }
+  </style>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <button onclick="history.back()" style="
+    margin: 1rem 0;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    background: #888;
+    color: white;
+    cursor: pointer;
+  ">← 戻る</button>
+
+  <h1>カート商品一覧</h1>
+
+  <div id="cartWrapper">
+    <div id="cartContainer"></div>
+    <div class="summary" style="background-color: #4f86b9; color: #fff;">
+      <div><strong>合計金額：<span id="cartTotal">0</span> 円</strong></div>
+      <p style="font-size: 14px;">保存が必要な場合はご自身でスクリーンショットをお願いいたします</p>
+      <!-- <button class="submit-btn" onclick="downloadPDF()">この内容でPDFダウンロード</button> -->
+    </div>
+  </div>
+
+  <script>
+    function formatPrice(price) { 
+      if (typeof price === 'number') return price.toLocaleString() + "円";
+      return price;
+    }
+
+    function loadCart() {
+      const cart = JSON.parse(localStorage.getItem("estimateCart") || "[]");
+      const container = document.getElementById("cartContainer");
+      container.innerHTML = "";
+
+      let total = 0;
+
+      cart.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "item";
+
+        const optionsHtml = item.options.map(opt => 
+          `<div>【${opt.questionLabel}】${opt.label}（${formatPrice(opt.price)}）</div>`
+        ).join("")
+
+        div.innerHTML = `
+          <div class="item-header">
+            <strong>${item.name}</strong>
+            <button class="remove-btn" onclick="removeItem(${index})">削除</button>
+          </div>
+          <div class="item-options">${optionsHtml}</div>
+          <div><strong>小計：${item.total.toLocaleString()} 円</strong></div>
+        `;
+
+        container.appendChild(div);
+
+        if (typeof item.total === "number") total += item.total;
+      });
+
+      document.getElementById("cartTotal").textContent = total.toLocaleString();
+    }
+
+    function removeItem(index) {
+      const cart = JSON.parse(localStorage.getItem("estimateCart") || "[]");
+      cart.splice(index, 1);
+      localStorage.setItem("estimateCart", JSON.stringify(cart));
+      loadCart();
+    }
+
+    window.addEventListener("DOMContentLoaded", loadCart);
+  </script>
+<script>
+  async function downloadPDF() {
+    const element = document.getElementById("cartWrapper");
+
+    // A4サイズ基準 (210mm × 297mm → px換算)
+    const pdfWidth = 595.28;
+    const pdfHeight = 841.89;
+
+    // canvas生成（高解像度化：scale=2）
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const imgProps = {
+      width: canvas.width,
+      height: canvas.height,
+      ratio: canvas.width / canvas.height
+    };
+
+    const pdf = new jspdf.jsPDF("p", "pt", "a4");
+
+    // PDF上での画像サイズを計算（横幅に合わせて高さをスケーリング）
+    const pdfImgWidth = pdfWidth;
+    const pdfImgHeight = pdfImgWidth / imgProps.ratio;
+
+    let position = 0;
+
+    // 複数ページ対応
+    if (pdfImgHeight < pdfHeight) {
+      pdf.addImage(imgData, "PNG", 0, 0, pdfImgWidth, pdfImgHeight);
+    } else {
+      let remainingHeight = pdfImgHeight;
+      while (remainingHeight > 0) {
+        pdf.addImage(imgData, "PNG", 0, position, pdfImgWidth, pdfImgHeight);
+        remainingHeight -= pdfHeight;
+        position -= pdfHeight;
+        if (remainingHeight > 0) pdf.addPage();
+      }
+    }
+
+    pdf.save("見積もり.pdf");
+  }
+</script>
+</body>
+</html>
