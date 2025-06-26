@@ -60,6 +60,12 @@
   </a>
 
   <script>
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        // ページが履歴キャッシュから復元されたときだけリロード
+        location.reload();
+      }
+    });
     const products = [
       { name: "名刺（両面）", price: 33000 },
       { name: "チラシ・ポスター（片面）", price: 55000 },
@@ -100,5 +106,6 @@
     renderProducts();
     updateCartSummary();
   </script>
+  
 </body>
 </html>
